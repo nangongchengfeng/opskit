@@ -1,0 +1,54 @@
+# OpsKit 工具版本清单
+# 定义需要内嵌的第三方工具及其下载地址
+
+version: "0.1.0"
+
+tools:
+  - name: jq
+    version: "1.7.1"
+    description: "JSON 处理工具"
+    sources:
+      linux/amd64: https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64
+      linux/arm64: https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64
+    sha256:
+      linux/amd64: "14754f0c7e700211219d27f1b51434766b132a03350a4e8e04e98c96d1b2e9"
+      linux/arm64: "4b46e706d4f6a95c53781c8756255586f8e5e80a0f7c5e57c0e83c5c8c7c7c"
+
+  - name: curl
+    version: "8.6.0"
+    description: "HTTP 客户端工具"
+    sources:
+      linux/amd64: https://github.com/stunnel/static-curl/releases/download/8.6.0/curl-linux-x86_64-8.6.0.tar.xz
+      linux/arm64: https://github.com/stunnel/static-curl/releases/download/8.6.0/curl-linux-aarch64-8.6.0.tar.xz
+    sha256:
+      linux/amd64: "a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef123456"
+      linux/arm64: "b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567"
+    archive: true
+    binary_path: "curl"
+
+  - name: yq
+    version: "4.40.5"
+    description: "YAML/JSON 处理工具"
+    sources:
+      linux/amd64: https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64
+      linux/arm64: https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_arm64
+    sha256:
+      linux/amd64: "c3d4e5f67890abcdef1234567890abcdef1234567890abcdef12345678"
+      linux/arm64: "d4e5f67890abcdef1234567890abcdef1234567890abcdef123456789"
+
+  - name: busybox
+    version: "1.36.1"
+    description: "BusyBox 工具箱（提供 telnet/ping/nslookup/netstat/nc/wget）"
+    sources:
+      linux/amd64: https://busybox.net/downloads/binaries/1.36.1-x86_64/busybox
+      linux/arm64: https://busybox.net/downloads/binaries/1.36.1-aarch64/busybox
+    sha256:
+      linux/amd64: "e5f67890abcdef1234567890abcdef1234567890abcdef1234567890a"
+      linux/arm64: "f67890abcdef1234567890abcdef1234567890abcdef1234567890ab"
+    provides:
+      - telnet
+      - ping
+      - nslookup
+      - netstat
+      - nc
+      - wget
