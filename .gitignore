@@ -5,7 +5,7 @@ opskit
 opskit-*
 
 # Assets (downloaded at build time)
-assets/
+
 
 # Test
 coverage.txt
