@@ -1,3 +1,4 @@
+// Package cli 定义命令行接口
 package cli
 
 import (
@@ -6,7 +7,7 @@ import (
 	"github.com/opskit/opskit/internal/embed"
 )
 
-
+// runClean 清理工具缓存目录
 func runClean() error {
 	mgr, err := embed.NewManager(binDir, verbose)
 	if err != nil {
@@ -15,11 +16,11 @@ func runClean() error {
 
 	cacheDir := mgr.CacheDir()
 	if verbose {
-		fmt.Printf("Cleaning cache directory: %s\n", cacheDir)
+		fmt.Printf("正在清理缓存目录: %s\n", cacheDir)
 	}
 
 	if err := mgr.Clean(); err != nil {
-		return fmt.Errorf("failed to clean cache: %w", err)
+		return fmt.Errorf("清理缓存失败: %w", err)
 	}
 
 	fmt.Printf("✓ 已清理缓存: %s\n", cacheDir)

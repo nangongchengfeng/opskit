@@ -1,3 +1,4 @@
+// Package cli 定义命令行接口
 package cli
 
 import (
@@ -6,7 +7,7 @@ import (
 	"github.com/opskit/opskit/internal/embed"
 )
 
-
+// runWhich 显示工具的缓存路径
 func runWhich(toolName string) error {
 	mgr, err := embed.NewManager(binDir, verbose)
 	if err != nil {
