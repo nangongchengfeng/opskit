@@ -1,7 +1,7 @@
 # Binaries
 bin/
 dist/
-opskit
+
 opskit-*
 
 # Assets (downloaded at build time)
