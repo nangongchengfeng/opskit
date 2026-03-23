@@ -3,7 +3,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/opskit/opskit/internal/embed"
@@ -19,7 +18,6 @@ var (
 
 	verbose bool
 	binDir  string
-	showVer bool
 )
 
 // NewRootCommand creates the root command
@@ -47,41 +45,75 @@ Examples:
   opskit jq '.name' data.json
   opskit curl https://example.com
   opskit list`,
-		Version:       Version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if showVer {
-				fmt.Printf("OpsKit %s\n", Version)
-				fmt.Printf("Build: %s\n", BuildTime)
-				fmt.Printf("Commit: %s\n", Commit)
-				os.Exit(0)
-			}
-			return nil
-		},
+		// 完全禁用Cobra的参数解析，自己处理所有逻辑
+		DisableFlagParsing: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// 处理全局标志
+			remainingArgs := []string{}
+			for i := 0; i < len(args); i++ {
+				arg := args[i]
+				switch arg {
+				case "-v", "--verbose":
+					verbose = true
+				case "--bin-dir":
+					if i+1 < len(args) {
+						binDir = args[i+1]
+						i++ // 跳过下一个参数
+					}
+				case "--version":
+					printVersion()
+					return nil
+				case "-h", "--help":
+					return cmd.Help()
+				default:
+					remainingArgs = append(remainingArgs, arg)
+				}
+			}
+
+			args = remainingArgs
+
 			if len(args) == 0 {
 				return cmd.Help()
 			}
+
+			// 处理内置命令
+			switch args[0] {
+			case "version":
+				printVersion()
+				return nil
+			case "list":
+				return runList()
+			case "extract":
+				if len(args) < 2 {
+					return fmt.Errorf("usage: opskit extract <tool> [destination]")
+				}
+				dest := "."
+				if len(args) >= 3 {
+					dest = args[2]
+				}
+				return runExtract(args[1], dest)
+			case "clean":
+				return runClean()
+			case "which":
+				if len(args) < 2 {
+					return fmt.Errorf("usage: opskit which <tool>")
+				}
+				return runWhich(args[1])
+			}
+
+			// 否则作为工具执行
 			return runTool(args[0], args[1:])
-		},
-		DisableFlagParsing: false,
-		FParseErrWhitelist: cobra.FParseErrWhitelist{
-			UnknownFlags: true,
 		},
 	}
 
-	cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
-	cmd.PersistentFlags().StringVar(&binDir, "bin-dir", "", "Directory to store/use cached binaries")
-	cmd.PersistentFlags().BoolVar(&showVer, "version", false, "Show version information")
-
-	cmd.AddCommand(NewListCommand())
-	cmd.AddCommand(NewVersionCommand())
-	cmd.AddCommand(NewExtractCommand())
-	cmd.AddCommand(NewCleanCommand())
-	cmd.AddCommand(NewWhichCommand())
-
 	return cmd
+}
+
+// printVersion prints version information
+func printVersion() {
+	runVersion()
 }
 
 // runTool executes a tool

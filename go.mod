@@ -1,6 +1,6 @@
 module github.com/opskit/opskit
 
-go 1.23.2
+go 1.18
 
 require github.com/spf13/cobra v1.10.2
 

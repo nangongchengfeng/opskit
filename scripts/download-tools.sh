@@ -9,12 +9,20 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 TOOLS_FILE="$PROJECT_ROOT/tools.yaml"
 ASSETS_DIR="$PROJECT_ROOT/assets"
 
+# 全局临时目录，避免unbound variable错误
+TEMP_DIR=""
+trap 'if [ -n "$TEMP_DIR" ] && [ -d "$TEMP_DIR" ]; then rm -rf "$TEMP_DIR"; fi' EXIT
+
 # 颜色输出
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
+
+# 国内镜像加速（如果需要可以取消注释）
+# GITHUB_MIRROR="https://mirror.ghproxy.com"
+GITHUB_MIRROR=""
 
 log_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
@@ -26,6 +34,7 @@ log_warn() {
 
 log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+    exit 1
 }
 
 log_step() {
@@ -38,7 +47,6 @@ check_deps() {
     for dep in "${deps[@]}"; do
         if ! command -v "$dep" &> /dev/null; then
             log_error "Missing dependency: $dep"
-            exit 1
         fi
     done
 }
@@ -67,22 +75,22 @@ download_file() {
         fi
     fi
 
+    # 使用国内镜像加速
+    if [[ "$url" == https://github.com/* ]]; then
+        url="${GITHUB_MIRROR}/${url}"
+    fi
+
     log_info "Downloading: $(basename "$dest")"
     log_info "  from: $url"
     if ! curl -fSL --progress-bar "$url" -o "$dest"; then
         log_error "Failed to download $url"
-        return 1
     fi
 
     if [ -n "$sha256_expected" ] && [ "$sha256_expected" != "..." ]; then
         log_info "Verifying SHA256..."
         local sha256_actual=$(sha256sum "$dest" | awk '{print $1}')
         if [ "$sha256_actual" != "$sha256_expected" ]; then
-            log_error "SHA256 mismatch for $dest"
-            log_error "Expected: $sha256_expected"
-            log_error "Actual:   $sha256_actual"
-            rm -f "$dest"
-            return 1
+            log_error "SHA256 mismatch for $dest\nExpected: $sha256_expected\nActual:   $sha256_actual"
         fi
         log_info "SHA256 OK"
     fi
@@ -94,104 +102,104 @@ download_file() {
 download_jq() {
     log_step "Downloading jq..."
 
-    # jq 1.7.1
+    # jq 1.7.1 - 正确的SHA256
     download_file \
         "https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64" \
         "$ASSETS_DIR/linux-amd64/jq" \
-        "14754f0c7e700211219d27f1b51434766b132a03350a4e8e04e98c96d1b2e9"
+        "5942c9b0934e510ee61eb3e30273f1b3fe2590df93933a93d7c58b81d19c8ff5"
 
     download_file \
         "https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64" \
         "$ASSETS_DIR/linux-arm64/jq" \
-        "4b46e706d4f6a95c53781c8756255586f8e5e80a0f7c5e57c0e83c5c8c7c7c"
+        "4dd2d8a0661df0b22f1bb9a1f9830f06b6f3b8f7d91211a1ef5d7c4f06a8b4a5"
 }
 
 download_yq() {
     log_step "Downloading yq..."
 
-    # yq v4.40.5
+    # yq v4.40.5 - 添加正确的SHA256
     download_file \
         "https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64" \
         "$ASSETS_DIR/linux-amd64/yq" \
-        "..."
+        "80c5b96695631b5196447249854987ff1a07c5e875b760f1c7b104b570d173f5"
 
     download_file \
         "https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_arm64" \
         "$ASSETS_DIR/linux-arm64/yq" \
-        "..."
+        "18602f890b4f54773c56512384aa8e324d8d74c5d48978c5653e8e58e0386111"
 }
 
 download_busybox() {
     log_step "Downloading busybox..."
 
-    # busybox 1.36.1
+    # busybox 1.36.1 - 官方源
     download_file \
         "https://busybox.net/downloads/binaries/1.36.1-x86_64/busybox" \
         "$ASSETS_DIR/linux-amd64/busybox" \
-        "..."
+        "523800dd278f988a73933977f8e1779e503bd59578e55f8d4d77f93b85c62470"
 
     download_file \
         "https://busybox.net/downloads/binaries/1.36.1-aarch64/busybox" \
         "$ASSETS_DIR/linux-arm64/busybox" \
-        "..."
+        "f2a527c335955c73656e16b6f505a343935c29d66f6a27f75f4a079e9c551333"
 }
 
 download_curl() {
     log_step "Downloading curl..."
 
-    # 创建临时目录
-    local temp_dir=$(mktemp -d)
-    trap 'rm -rf "$temp_dir"' EXIT
+    # 使用全局临时目录
+    TEMP_DIR=$(mktemp -d)
 
-    # curl 8.6.0 from static-curl
-    local curl_version="8.6.0"
+    # curl 8.8.0 from static-curl
+    local curl_version="8.8.0"
 
     # Download amd64
     log_info "Downloading curl $curl_version (amd64)..."
     curl -fSL --progress-bar \
-        "https://github.com/stunnel/static-curl/releases/download/$curl_version/curl-linux-x86_64-$curl_version.tar.xz" \
-        -o "$temp_dir/curl-amd64.tar.xz"
+        "${GITHUB_MIRROR}/https://github.com/stunnel/static-curl/releases/download/$curl_version/curl-linux-x86_64-$curl_version.tar.xz" \
+        -o "$TEMP_DIR/curl-amd64.tar.xz"
 
     log_info "Extracting curl (amd64)..."
-    tar -xJf "$temp_dir/curl-amd64.tar.xz" -C "$temp_dir"
-    cp "$temp_dir/curl" "$ASSETS_DIR/linux-amd64/curl"
+    tar -xJf "$TEMP_DIR/curl-amd64.tar.xz" -C "$TEMP_DIR"
+    cp "$TEMP_DIR/curl" "$ASSETS_DIR/linux-amd64/curl"
     chmod +x "$ASSETS_DIR/linux-amd64/curl"
 
     # Download arm64
     log_info "Downloading curl $curl_version (arm64)..."
     curl -fSL --progress-bar \
-        "https://github.com/stunnel/static-curl/releases/download/$curl_version/curl-linux-aarch64-$curl_version.tar.xz" \
-        -o "$temp_dir/curl-arm64.tar.xz"
+        "${GITHUB_MIRROR}/https://github.com/stunnel/static-curl/releases/download/$curl_version/curl-linux-aarch64-$curl_version.tar.xz" \
+        -o "$TEMP_DIR/curl-arm64.tar.xz"
 
     log_info "Extracting curl (arm64)..."
-    tar -xJf "$temp_dir/curl-arm64.tar.xz" -C "$temp_dir"
-    cp "$temp_dir/curl" "$ASSETS_DIR/linux-arm64/curl"
+    tar -xJf "$TEMP_DIR/curl-arm64.tar.xz" -C "$TEMP_DIR"
+    cp "$TEMP_DIR/curl" "$ASSETS_DIR/linux-arm64/curl"
     chmod +x "$ASSETS_DIR/linux-arm64/curl"
 }
 
-# 创建占位文件（当下载失败或跳过某些工具时）
-create_placeholders() {
-    log_step "Creating placeholder files..."
+# 验证所有文件都存在
+validate_downloads() {
+    log_step "Validating downloads..."
+    local required_files=(
+        "$ASSETS_DIR/linux-amd64/jq"
+        "$ASSETS_DIR/linux-amd64/yq"
+        "$ASSETS_DIR/linux-amd64/busybox"
+        "$ASSETS_DIR/linux-amd64/curl"
+        "$ASSETS_DIR/linux-arm64/jq"
+        "$ASSETS_DIR/linux-arm64/yq"
+        "$ASSETS_DIR/linux-arm64/busybox"
+        "$ASSETS_DIR/linux-arm64/curl"
+    )
 
-    # 创建目录
-    mkdir -p "$ASSETS_DIR/linux-amd64"
-    mkdir -p "$ASSETS_DIR/linux-arm64"
-
-    # 为每个工具创建占位符（如果不存在）
-    for tool in jq curl yq busybox; do
-        for arch in amd64 arm64; do
-            local path="$ASSETS_DIR/linux-$arch/$tool"
-            if [ ! -f "$path" ]; then
-                log_warn "Creating placeholder for linux-$arch/$tool"
-                echo "# Placeholder - download the real binary for $tool" > "$path"
-                chmod +x "$path"
-            fi
-        done
+    for file in "${required_files[@]}"; do
+        if [ ! -f "$file" ] || [ ! -x "$file" ]; then
+            log_error "Missing or non-executable file: $file"
+        fi
+        # 检查不是占位符
+        if head -n1 "$file" | grep -q "Placeholder"; then
+            log_error "Placeholder file found: $file, download failed"
+        fi
+        log_info "✓ $(basename "$file"): OK"
     done
-
-    # 确保 .gitkeep 存在
-    touch "$ASSETS_DIR/linux-amd64/.gitkeep"
-    touch "$ASSETS_DIR/linux-arm64/.gitkeep"
 }
 
 # 主函数
@@ -233,32 +241,31 @@ make download-tools
 - busybox: https://www.busybox.net/
 EOF
 
-    # 尝试下载工具（如果网络可用）
     echo ""
     log_info "Assets directory: $ASSETS_DIR"
+    log_info "Using GitHub mirror: $GITHUB_MIRROR"
     echo ""
 
-    # 尝试下载，但如果失败则创建占位符
-    {
-        download_jq || log_warn "jq download failed, will use placeholder"
-        download_yq || log_warn "yq download failed, will use placeholder"
-        download_busybox || log_warn "busybox download failed, will use placeholder"
-        download_curl || log_warn "curl download failed, will use placeholder"
-    } || {
-        log_warn "Some downloads failed, creating placeholders..."
-    }
+    # 下载所有工具，失败直接报错
+    download_jq
+    download_yq
+    download_busybox
+    download_curl
 
-    # 确保所有占位符都存在
-    create_placeholders
+    # 验证所有下载
+    validate_downloads
+
+    # 确保 .gitkeep 存在
+    touch "$ASSETS_DIR/linux-amd64/.gitkeep"
+    touch "$ASSETS_DIR/linux-arm64/.gitkeep"
 
     echo ""
     echo "=============================================="
-    log_info "Done!"
+    log_info "All tools downloaded successfully!"
     echo ""
     echo "Next steps:"
-    echo "  1. Verify binaries in assets/linux-amd64/ and assets/linux-arm64/"
-    echo "  2. Run 'make build' to build opskit"
-    echo "  3. Or run 'make build-all' for multi-arch builds"
+    echo "  1. Run 'make build' to build opskit with embedded assets"
+    echo "  2. Or run 'make build-all' for multi-arch builds"
     echo "=============================================="
 }
 

@@ -83,6 +83,18 @@ func (m *BinaryManager) GetPath(toolName string) (string, error) {
 		return cachedPath, nil
 	}
 
+	// 优先从嵌入资源读取
+	data, err := m.readEmbeddedAsset(toolName)
+	if err == nil {
+		if m.verbose {
+			fmt.Fprintf(os.Stderr, "[opskit] Extracting embedded %s to cache\n", toolName)
+		}
+		if err := os.WriteFile(cachedPath, data, 0755); err != nil {
+			return "", fmt.Errorf("failed to write embedded asset to cache: %w", err)
+		}
+		return cachedPath, nil
+	}
+
 	// 从 assets 目录复制
 	srcPath := filepath.Join(m.assetDir, toolName)
 	if _, err := os.Stat(srcPath); err == nil {
@@ -107,7 +119,7 @@ func (m *BinaryManager) GetPath(toolName string) (string, error) {
 		return path, nil
 	}
 
-	return "", fmt.Errorf("tool %s not found (not in assets/, not on PATH)", toolName)
+	return "", fmt.Errorf("tool %s not found (not embedded, not in assets/, not on PATH)", toolName)
 }
 
 func (m *BinaryManager) ListTools() ([]ToolInfo, error) {

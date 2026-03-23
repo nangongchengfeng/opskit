@@ -5,21 +5,11 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/spf13/cobra"
 	"github.com/opskit/opskit/internal/embed"
 )
 
-// NewListCommand creates the list command
-func NewListCommand() *cobra.Command {
-	return &cobra.Command{
-		Use:   "list",
-		Short: "List all embedded tools",
-		Long:  "List all tools embedded in opskit with their versions and descriptions.",
-		RunE:  runList,
-	}
-}
 
-func runList(cmd *cobra.Command, args []string) error {
+func runList() error {
 	mgr, err := embed.NewManager(binDir, verbose)
 	if err != nil {
 		return err

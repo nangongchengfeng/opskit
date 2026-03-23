@@ -3,21 +3,10 @@ package cli
 import (
 	"fmt"
 	"runtime"
-
-	"github.com/spf13/cobra"
 )
 
-// NewVersionCommand creates the version command
-func NewVersionCommand() *cobra.Command {
-	return &cobra.Command{
-		Use:   "version",
-		Short: "Show opskit version",
-		Long:  "Show opskit version and build information.",
-		Run:   runVersion,
-	}
-}
-
-func runVersion(cmd *cobra.Command, args []string) {
+// runVersion prints detailed version information
+func runVersion() {
 	fmt.Printf("OpsKit %s\n", Version)
 	fmt.Printf("  Build Time: %s\n", BuildTime)
 	fmt.Printf("  Commit: %s\n", Commit)
